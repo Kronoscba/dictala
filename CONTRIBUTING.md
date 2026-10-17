@@ -38,6 +38,12 @@ test de la lógica aislada y contá en el PR que no se puede verificar en CI.
 
 ## Reglas de implementación
 
+- **El nombre del paquete va en minúscula.** `dictala` es el nombre del
+  distribución, del comando (`dictala doctor`) y de la configuración
+  (`~/.config/dictala/`), y eso no se toca. La marca **visual** es `Dictala`,
+  con mayúscula, y vive en el logo (`docs/logo.svg`) y en los títulos de las
+  secciones. No son la misma cosa.
+
 - ** degrading es mejor que fallar.** Si falta `wl-copy`, `ydotool` o
   `notify-send`, `dictala` sigue funcionando con menos funciones y lo avisa.
   Un error de I/O en el log nunca debe tumbar el dictado.
