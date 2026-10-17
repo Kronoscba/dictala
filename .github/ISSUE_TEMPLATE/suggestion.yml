@@ -1,0 +1,35 @@
+name: Suggestion
+description: Una idea o una mejora
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Qué te gustaría que hiciera
+      description: Qué problema resuelve y cómo lo usarías.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas que consideraste
+
+  - type: dropdown
+    id: entorno
+    attributes:
+      label: ¿En qué entorno lo probaste?
+      options:
+        - Arch Linux + niri
+        - Otra distribución de Linux
+        - Otro compositor sobre Wayland
+        - Todavía no lo probé
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: alcance
+    attributes:
+      label: Alcance
+      options:
+        - label: Esto ampliaría la tabla de compatibilidad (nuevo compositor, distro, micrófono)

@@ -1,0 +1,53 @@
+# Virtualenvs
+.venv/
+.venv-dev/
+venv/
+env/
+
+# Build
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Modelos de Whisper y caches
+models/
+*.bin
+.cache/
+huggingface/
+
+# Logs y temporales
+*.log
+dictala.lock
+*.wav
+*.flac
+*.ogg
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Secretos: nunca deben entrar al repo
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+credentials*
+secrets*

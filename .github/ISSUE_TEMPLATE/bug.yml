@@ -1,0 +1,80 @@
+name: Bug
+description: Algo no funciona como debería
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar. Cuanta más info del entorno, más rápido lo
+        reproducimos.
+
+  - type: textarea
+    id: que-pasa
+    attributes:
+      label: Qué pasa
+      description: Qué esperabas y qué obtuviste.
+      placeholder: "Al dictar, dice «compré» sin tilde y me queda «compre»."
+    validations:
+      required: true
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Salida de `dictala doctor`
+      description: Pegá la salida completa.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: log-dictado
+    attributes:
+      label: Contenido del log de una ejecución
+      description: "tail -30 ${XDG_RUNTIME_DIR:-/tmp}/dictala.log"
+      render: shell
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distribución y versión
+      placeholder: "Arch Linux, kernel 6.x"
+    validations:
+      required: true
+
+  - type: input
+    id: compositor
+    attributes:
+      label: Compositor y versión
+      placeholder: "niri 26.04 sobre Wayland"
+    validations:
+      required: true
+
+  - type: input
+    id: microfono
+    attributes:
+      label: Micrófono
+      description: "Nombre y tipo, según `dictala doctor`."
+      placeholder: "Jabra BIZ 1100 USB, mono, 48000 Hz"
+    validations:
+      required: true
+
+  - type: input
+    id: modelo
+    attributes:
+      label: Modelo de Whisper
+      placeholder: "base"
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Versión de Python y del paquete
+      placeholder: "Python 3.12.13, dictala 0.1.0"
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuración
+      description: Contenido de `~/.config/dictala/config.toml`, si la tocaste.
+      render: toml
