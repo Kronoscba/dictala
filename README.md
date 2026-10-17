@@ -1,6 +1,6 @@
 <div align="center" markdown="1">
 
-[![dictala](docs/logo.svg)](https://github.com/Kronoscba/dictala)
+[![Dictala](docs/logo.svg?v=2)](https://github.com/Kronoscba/dictala)
 
 [![CI](https://github.com/Kronoscba/dictala/actions/workflows/ci.yml/badge.svg)](https://github.com/Kronoscba/dictala/actions/workflows/ci.yml)
 [![Licencia: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
