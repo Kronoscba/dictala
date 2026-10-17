@@ -142,6 +142,18 @@ Pegá esto en tu config de niri, dentro del bloque 'binds { }':
         spawn-sh "systemd-run --user --scope -q -p MemoryMax=$MEMORIA $BIN/dictala"
     }
 
+QUE TECLA ES
+    XF86Calculator es la tecla Calculadora, la que dice CALC en muchos
+    teclados. Apretala, habla, y el texto aparece donde tengas el cursor.
+
+    Si tu teclado no la tiene, cambiala por la que quieras. Para descubrir
+    el nombre de una tecla en niri, corré esto y apretala:
+
+        wev
+
+    Te imprime el nombre XKB (por ejemplo 'XF86AudioMicMute') y eso es lo
+    que va en lugar de XF86Calculator.
+
 Despues: niri msg action load-config-file
         (o reinicia la sesion)
 

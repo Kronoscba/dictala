@@ -66,10 +66,30 @@ Después: `niri msg action load-config-file`.
 
 `install.sh` **no toca tu config de niri**. Ese snippet lo pegás vos.
 
+<a name="que-tecla"></a>
+
+### Qué tecla usar
+
+`XF86Calculator` es la tecla **Calculadora**, la que dice **CALC** en muchos
+teclados. Apretala, hablá, y el texto aparece donde tengas el cursor.
+
+Si tu teclado no la tiene, usá la que quieras. Para descubrir el nombre de una
+tecla en niri:
+
+```bash
+wev
+```
+
+Apretá la tecla y mirá el nombre XKB que imprime (por ejemplo
+`XF86AudioMicMute`). Eso es lo que va donde dice `XF86Calculator`.
+
+Una alternativa si preferís no tocar la tecla: usá una combinación con
+modificador, tipo `Mod+Space`. Eso evita las teclas que ya uses para otra cosa.
+
 ### Calibración
 
 El umbral por defecto (`0.02`) está elegido para un micrófono USB normal. Si
-dicta phrases cortadas o no corta nunca:
+dicta frases cortadas o no corta nunca:
 
 ```bash
 dictala doctor
@@ -284,6 +304,26 @@ XF86Calculator repeat=false {
 ```
 
 Then: `niri msg action load-config-file`.
+
+`install.sh` **does not touch your niri config**. You paste that snippet.
+
+### Which key to use
+
+`XF86Calculator` is the **Calculator** key, the one labelled **CALC** on many
+keyboards. Press it, speak, and the text lands wherever your cursor is.
+
+If your keyboard doesn't have it, use whatever key you like. To find the name
+of a key in niri:
+
+```bash
+wev
+```
+
+Press the key and read the XKB name it prints (for example
+`XF86AudioMicMute`). That is what goes where `XF86Calculator` is.
+
+If you'd rather not dedicate a single key, use a combination with a modifier,
+like `Mod+Space`. That avoids keys you already use for something else.
 
 `install.sh` **never touches your niri config**. You paste that snippet yourself.
 
