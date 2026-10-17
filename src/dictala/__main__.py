@@ -56,6 +56,10 @@ def dictar(cfg: config.Config) -> int:
         log.log(f"--- fin en {time.monotonic() - inicio:.1f}s ---")
     except Exception as exc:  # noqa: BLE001
         log.error(f"ERROR: {type(exc).__name__}: {exc}")
+        if isinstance(exc, RuntimeError) and audio.es_placeholder(mic):
+            # Caso tipico en una VM: hay fuentes de relleno, ningun microfono.
+            log.error(f"'{mic}' no es un microfono real. No hay nada que dictar.")
+            log.error("Probalo en una maquina real, o corre: dictala doctor")
         if cfg.depurar:
             raise
         return 1

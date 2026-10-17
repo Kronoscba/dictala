@@ -9,8 +9,10 @@ asi que hay que entregarle 16000 Hz exactos.
 
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Callable
+from contextlib import contextmanager
 from typing import Any
 
 import numpy as np
@@ -34,6 +36,17 @@ def dispositivos() -> list[dict[str, Any]]:
         for d in sd.query_devices()
         if d["max_input_channels"] > 0
     ]
+
+
+def es_placeholder(nombre: str) -> bool:
+    """True si el 'dispositivo' no es un microfono real.
+
+    PipeWire/ALSA publican fuentes de relleno ('Dummy Output') que PortAudio
+    lista como entrada pero que no capturan nada. Es el caso tipico en una VM
+    sin microfono: hay dispositivos, y ninguno sirve.
+    """
+    n = nombre.lower()
+    return any(p in n for p in ("dummy", "null", "monitor", "loopback"))
 
 
 def _coincide(dev: dict[str, Any], objetivo: str | int | None) -> bool:
@@ -69,6 +82,29 @@ def _stream(mic: str | int, tasa: int, blocksize: int, callback) -> sd.InputStre
     )
 
 
+@contextmanager
+def _silenciar_stderr():
+    """Tapa la queja de PortAudio mientras abre el stream.
+
+    PortAudio escribe a stderr desde C ('Expression 'r' failed in
+    pa_linux_alsa.c...'), asi que redirect_stderr no alcanza: hay que mover el
+    fd 2 de verdad.
+    """
+    try:
+        nulo = os.open(os.devnull, os.O_WRONLY)
+    except OSError:  # pragma: no cover - devnull siempre esta
+        yield
+        return
+    guardado = os.dup(2)
+    os.dup2(nulo, 2)
+    try:
+        yield
+    finally:
+        os.dup2(guardado, 2)
+        os.close(guardado)
+        os.close(nulo)
+
+
 def abrir_stream(mic: str | int, tasa: int, blocksize: int, callback) -> tuple[sd.InputStream, int]:
     """Abre el stream probando tasas hasta que una funcione.
 
@@ -80,8 +116,9 @@ def abrir_stream(mic: str | int, tasa: int, blocksize: int, callback) -> tuple[s
     ultimo_error = None
     for intento in candidatas:
         try:
-            s = _stream(mic, intento, blocksize, callback)
-            s.start()
+            with _silenciar_stderr():
+                s = _stream(mic, intento, blocksize, callback)
+                s.start()
             log(f"Stream abierto a {intento} Hz")
             return s, intento
         except Exception as exc:  # sd.PortAudioError y errores de open()
@@ -190,13 +227,16 @@ def medir_rms(mic: str | int, tasa: int, segundos: float, bloques: int = 256) ->
     def cb(indata, frames, t, status):  # noqa: ARG001
         niveles.append(float(np.sqrt(np.mean(indata**2))))
 
-    with sd.InputStream(
-        samplerate=tasa,
-        channels=1,
-        dtype="float32",
-        device=mic,
-        blocksize=bloques,
-        callback=cb,
+    with (
+        _silenciar_stderr(),
+        sd.InputStream(
+            samplerate=tasa,
+            channels=1,
+            dtype="float32",
+            device=mic,
+            blocksize=bloques,
+            callback=cb,
+        ),
     ):
         time.sleep(segundos)
     return niveles

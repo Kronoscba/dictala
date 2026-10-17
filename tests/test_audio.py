@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pytest
 
@@ -100,3 +102,32 @@ def test_elegir_sin_dispositivos(monkeypatch):
     monkeypatch.setattr(audio, "dispositivos", lambda: [])
     with pytest.raises(RuntimeError):
         audio.elegir_dispositivo(None)
+
+
+@pytest.mark.parametrize(
+    "nombre",
+    ["Dummy Output", "dummy", "Monitor of Built-in Audio", "Null Output", "hw:Loopback,1"],
+)
+def test_es_placeholder_detecta_relleno(nombre):
+    """Sin microfono real, PipeWire publica fuentes vacias que PortAudio lista."""
+    assert audio.es_placeholder(nombre)
+
+
+@pytest.mark.parametrize("nombre", ["Jabra BIZ 1100 USB", "default", "pipewire", "Built-in Mic"])
+def test_es_placeholder_no_dispara_con_mics_reales(nombre):
+    assert not audio.es_placeholder(nombre)
+
+
+def test_silenciar_stderr_tapa_y_restaura(capfd):
+    """El fd 2 tiene que volver como estaba: si no, perdemos el log.
+
+    Se escribe con os.write y no con print porque print buferea: el write
+    saldria despues del restore y el test probaria otra cosa.
+    """
+    os.write(2, b"antes\n")
+    with audio._silenciar_stderr():
+        os.write(2, b"dentro\n")
+    os.write(2, b"despues\n")
+    err = capfd.readouterr().err
+    assert "dentro" not in err
+    assert "antes" in err and "despues" in err

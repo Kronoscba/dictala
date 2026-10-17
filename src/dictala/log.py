@@ -11,6 +11,7 @@ import time
 
 MAX_BYTES = 512 * 1024
 _archivo: str | None = None
+_a_stdout = True
 
 
 def configurar(ruta: str | None) -> None:
@@ -18,9 +19,20 @@ def configurar(ruta: str | None) -> None:
     _archivo = ruta
 
 
+def callar() -> None:
+    """Deja de escribir a stdout.
+
+    Para `doctor`, que ya imprime su propio informe: si no, las lineas con
+    timestamp del log se le mezclan en el medio.
+    """
+    global _a_stdout
+    _a_stdout = False
+
+
 def log(mensaje: str) -> None:
     linea = f"{time.strftime('%H:%M:%S')} {mensaje}"
-    print(linea, flush=True)
+    if _a_stdout:
+        print(linea, flush=True)
     if not _archivo:
         return
     try:

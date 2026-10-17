@@ -111,7 +111,18 @@ elif ! systemctl --user list-unit-files ydotool.service >/dev/null 2>&1; then
   echo "     El pegado automatico no va a funcionar. Texto al portapapeles, si."
 else
   if systemctl --user enable --now ydotool.service >/dev/null 2>&1; then
-    ok "ydotool.service habilitado y activo"
+    # systemctl puede devolver ok y el daemon morir igual (lo tipico es que no
+    # puedas abrir /dev/uinput). Preguntale al daemon, no al gestor de servicios.
+    # ydotool solo imprime 'fd_daemon_socket' si logró conectarse: chequeo
+    # positivo, no parsing de un error en ingles.
+    if ydotool debug 2>&1 | grep -q 'fd_daemon_socket'; then
+      aviso "ydotool.service arranco pero ydotoold NO responde."
+      echo "    Casi siempre es el grupo 'input':"
+      echo "       sudo usermod -aG input \$USER    y volve a iniciar sesion."
+      echo "     Texto al portapapeles va a funcionar igual; el pegado automatico no."
+    else
+      ok "ydotool.service habilitado y ydotoold responde"
+    fi
   else
     aviso "No pude habilitar ydotool.service. Probalo vos:"
     echo "     systemctl --user enable --now ydotool.service"
