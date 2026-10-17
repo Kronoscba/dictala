@@ -2,6 +2,8 @@
 
 # Dictala
 
+<img src="docs/logo.svg" alt="dictala" width="230">
+
 [![CI](https://github.com/Kronoscba/dictala/actions/workflows/ci.yml/badge.svg)](https://github.com/Kronoscba/dictala/actions/workflows/ci.yml)
 [![Licencia: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue?logo=python&logoColor=white)](pyproject.toml)

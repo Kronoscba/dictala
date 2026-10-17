@@ -1,0 +1,15 @@
+<svg width="230" height="52" viewBox="0 0 230 52" role="img" aria-label="dictala">
+  <title>dictala</title>
+  <rect width="230" height="52" rx="10" fill="#1f6feb"/>
+  <g stroke="#fff" stroke-width="4" stroke-linecap="round">
+    <line x1="20" y1="26" x2="20" y2="26"/>
+    <line x1="34" y1="18" x2="34" y2="34"/>
+    <line x1="48" y1="12" x2="48" y2="40"/>
+    <line x1="62" y1="20" x2="62" y2="32"/>
+    <line x1="76" y1="8"  x2="76" y2="44"/>
+    <line x1="90" y1="16" x2="90" y2="36"/>
+    <line x1="104" y1="22" x2="104" y2="30"/>
+  </g>
+  <text x="122" y="34" fill="#fff" font-family="DejaVu Sans,Verdana,sans-serif"
+        font-size="22" font-weight="700">dictala</text>
+</svg>
