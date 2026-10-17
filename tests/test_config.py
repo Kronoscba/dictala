@@ -26,14 +26,17 @@ def test_defaults_sin_archivo(tmp_path, monkeypatch):
 
 
 def test_lee_archivo_toml(tmp_path):
-    ruta = escribir(tmp_path, """
+    ruta = escribir(
+        tmp_path,
+        """
         [voz]
         modelo = "tiny"
         umbral = 0.05
 
         [salida]
         terminales = ["foot", "alacritty"]
-    """)
+    """,
+    )
     cfg = config.cargar(ruta)
     assert cfg.modelo == "tiny"
     assert cfg.umbral == 0.05

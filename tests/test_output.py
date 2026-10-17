@@ -24,7 +24,12 @@ def test_ctrl_v_por_defecto():
 def test_ctrl_shift_v_en_terminal_configurada():
     terminales = ("foot", "alacritty")
     assert output.teclas_pegar("foot", terminales) == [
-        "29:1", "42:1", "47:1", "47:0", "42:0", "29:0",
+        "29:1",
+        "42:1",
+        "47:1",
+        "47:0",
+        "42:0",
+        "29:0",
     ]
 
 
@@ -97,6 +102,8 @@ def test_app_enfocada_aguanta_error_de_niri(monkeypatch):
 
 
 def test_disponible_detecta_binario(monkeypatch):
-    monkeypatch.setattr(output.shutil, "which", lambda p: "/usr/bin/wl-copy" if p == "wl-copy" else None)
+    monkeypatch.setattr(
+        output.shutil, "which", lambda p: "/usr/bin/wl-copy" if p == "wl-copy" else None
+    )
     assert output.disponible("wl-copy") is True
     assert output.disponible("ydotool") is False

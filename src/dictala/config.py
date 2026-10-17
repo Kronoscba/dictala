@@ -57,14 +57,10 @@ class Config:
     origen: dict[str, str] = field(default_factory=dict)
 
     def ruta_log(self) -> str:
-        return self.log or os.path.join(
-            os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "dictala.log"
-        )
+        return self.log or os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "dictala.log")
 
     def ruta_lock(self) -> str:
-        return self.lock or os.path.join(
-            os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "dictala.lock"
-        )
+        return self.lock or os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "dictala.lock")
 
 
 def _campos() -> list[str]:

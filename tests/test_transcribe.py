@@ -73,7 +73,12 @@ def test_texto_vacio_devuelve_none():
             return iter([]), None
 
     hilo = threading.Thread(target=lambda: None)
-    assert transcribe.transcribir(np.zeros(160, dtype=np.float32), hilo, {"modelo": ModeloVacio()}, "es") is None
+    assert (
+        transcribe.transcribir(
+            np.zeros(160, dtype=np.float32), hilo, {"modelo": ModeloVacio()}, "es"
+        )
+        is None
+    )
 
 
 def test_idioma_auto_pasa_none():
@@ -92,6 +97,7 @@ def test_idioma_auto_pasa_none():
 
 def test_unjuntado_sin_espacios_dobles():
     """Los Segment.text traen espacio inicial; unir con ' ' duplicaba."""
+
     class Segmento:
         def __init__(self, t):
             self.text = t
@@ -101,7 +107,9 @@ def test_unjuntado_sin_espacios_dobles():
             return iter([Segmento(" primera"), Segmento(" segunda")]), None
 
     hilo = threading.Thread(target=lambda: None)
-    texto = transcribe.transcribir(np.zeros(160, dtype=np.float32), hilo, {"modelo": Modelo()}, "es")
+    texto = transcribe.transcribir(
+        np.zeros(160, dtype=np.float32), hilo, {"modelo": Modelo()}, "es"
+    )
     assert texto == "primera segunda"
     assert "  " not in texto
 

@@ -46,8 +46,9 @@ def app_enfocada(compositor: str = "auto") -> str:
     if compositor == "auto" and not disponible("niri"):
         return ""
     try:
-        r = subprocess.run(["niri", "msg", "-j", "windows"],
-                           capture_output=True, text=True, timeout=3, check=True)
+        r = subprocess.run(
+            ["niri", "msg", "-j", "windows"], capture_output=True, text=True, timeout=3, check=True
+        )
         for w in json.loads(r.stdout):
             if w.get("is_focused"):
                 return str(w.get("app_id", "")).lower()

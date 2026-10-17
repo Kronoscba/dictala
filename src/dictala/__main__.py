@@ -1,9 +1,9 @@
 """Punto de entrada de la linea de comandos.
 
-  dictala             dicta una vez (lo que dispara la tecla)
-  dictala doctor      diagnostico y calibracion
-  dictala config      muestra la configuracion en uso y de donde sale
-  dictala init-config escribe el archivo de configuracion con los defaults
+dictala             dicta una vez (lo que dispara la tecla)
+dictala doctor      diagnostico y calibracion
+dictala config      muestra la configuracion en uso y de donde sale
+dictala init-config escribe el archivo de configuracion con los defaults
 """
 
 from __future__ import annotations
@@ -37,7 +37,12 @@ def dictar(cfg: config.Config) -> int:
         hilo, caja = transcribe.lanzar_carga(cfg.modelo)
 
         audio_real, tasa_usada = audio.grabar(
-            mic, cfg.tasa, cfg.blocksize, cfg.umbral, cfg.silencio_s, cfg.max_s,
+            mic,
+            cfg.tasa,
+            cfg.blocksize,
+            cfg.umbral,
+            cfg.silencio_s,
+            cfg.max_s,
             al_abrir=hilo.start,
         )
         if audio_real is None:

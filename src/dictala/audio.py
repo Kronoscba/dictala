@@ -60,8 +60,12 @@ def elegir_dispositivo(objetivo: str | int | None = None) -> dict[str, Any]:
 
 def _stream(mic: str | int, tasa: int, blocksize: int, callback) -> sd.InputStream:
     return sd.InputStream(
-        samplerate=tasa, channels=1, dtype="float32",
-        device=mic, blocksize=blocksize, callback=callback,
+        samplerate=tasa,
+        channels=1,
+        dtype="float32",
+        device=mic,
+        blocksize=blocksize,
+        callback=callback,
     )
 
 
@@ -187,8 +191,12 @@ def medir_rms(mic: str | int, tasa: int, segundos: float, bloques: int = 256) ->
         niveles.append(float(np.sqrt(np.mean(indata**2))))
 
     with sd.InputStream(
-        samplerate=tasa, channels=1, dtype="float32",
-        device=mic, blocksize=bloques, callback=cb,
+        samplerate=tasa,
+        channels=1,
+        dtype="float32",
+        device=mic,
+        blocksize=bloques,
+        callback=cb,
     ):
         time.sleep(segundos)
     return niveles

@@ -55,8 +55,9 @@ def esperar_modelo(hilo: threading.Thread, caja: dict[str, Any]):
     return caja.get("modelo")
 
 
-def transcribir(audio16k: np.ndarray, hilo: threading.Thread, caja: dict[str, Any],
-                idioma: str) -> str | None:
+def transcribir(
+    audio16k: np.ndarray, hilo: threading.Thread, caja: dict[str, Any], idioma: str
+) -> str | None:
     """Transcribe y devuelve el texto, o None si no se pudo."""
     modelo = esperar_modelo(hilo, caja)
     if modelo is None:
