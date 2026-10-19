@@ -6,15 +6,13 @@ import os
 import shutil
 import subprocess
 
-from . import audio, config, log
+from . import audio, config, log, output
 from .audio import es_placeholder
 
 DEPENDENCIAS = {
-    "wl-copy": "portapapeles (paquete: wl-clipboard)",
     "ydotool": "pegado automatico (paquete: ydotool)",
     "notify-send": "notificaciones (paquete: libnotify)",
     "systemd-run": "limite de memoria (paquete: systemd)",
-    "niri": "deteccion de la app enfocada (opcional)",
 }
 
 
@@ -31,11 +29,51 @@ def revisar_dependencias() -> bool:
     todo_ok = True
     for programa, para_que in DEPENDENCIAS.items():
         ok = shutil.which(programa) is not None
-        if programa == "niri":
-            ok = True  # opcional
         todo_ok = todo_ok and ok
         print(f"  [{_estado(ok)}] {programa:<12} {para_que}")
+
+    # El portapapeles es un requisito logico con varias implementaciones:
+    # en Wayland va wl-copy, en X11 xclip o xsel.
+    copiadores = output.copiadores_disponibles()
+    hay = bool(copiadores)
+    todo_ok = todo_ok and hay
+    detalle = ", ".join(copiadores) if hay else "wl-clipboard (Wayland) o xclip (X11)"
+    print(f"  [{_estado(hay)}] {'portapapeles':<12} via {detalle}")
     return todo_ok
+
+
+def revisar_compositor() -> bool:
+    """Que compositor responde de verdad, y si da la ventana enfocada."""
+    _titulo("Compositor")
+    sesion = (
+        "Wayland"
+        if os.environ.get("WAYLAND_DISPLAY")
+        else ("X11" if os.environ.get("DISPLAY") else "ninguna")
+    )
+    print(f"  sesion: {sesion}")
+    if sesion == "ninguna":
+        print("  no hay WAYLAND_DISPLAY ni DISPLAY: sesion sin graficos.")
+        return False
+
+    app = output.app_enfocada("auto")
+    if app:
+        print(f"  [{_estado(True)}] {output.detectar_compositor():<12} app enfocada: {app}")
+        return True
+
+    instalados = [
+        n for n, (progs, _) in output.DETECTORES.items() if any(shutil.which(p) for p in progs)
+    ]
+    if instalados:
+        # Hyprland instalado no es Hyprland corriendo: pasa siempre que tengas
+        # el paquete puesto y estes usando otro compositor.
+        print(f"  {', '.join(instalados)} esta instalado, pero ninguno responde.")
+        print("  Si no es el compositor que usas, no es un problema: se pega")
+        print("  con Ctrl+V. Para terminales, ponelas en `terminales` de la config.")
+    else:
+        print("  no encontre el IPC de ningun compositor conocido.")
+        print("  Se pega con Ctrl+V sin preguntar por la app.")
+        print("  Para terminales, ponelas a mano en `terminales` de la config.")
+    return False
 
 
 def revisar_ydotoold() -> bool:
@@ -168,6 +206,7 @@ def main(segundos: float = 5.0) -> int:
     print("dictala doctor - diagnostico y calibracion")
     print(f"  config: {config.RUTA_CONFIG} (existe: {config.RUTA_CONFIG.is_file()})")
     revisar_dependencias()
+    revisar_compositor()
     revisar_ydotoold()
     revisar_uinput()
     listar_microfonos()

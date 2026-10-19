@@ -28,7 +28,7 @@ VALOR_POR_DEFECTO: dict[str, Any] = {
     "tasa": 0,  # 0 = la que admita el dispositivo
     "blocksize": 4096,
     "terminales": (),
-    "compositor": "auto",  # auto | niri | ninguno
+    "compositor": "auto",  # auto | niri | hyprland | sway | x11 | ninguno
     "log": None,
     "lock": None,
     "depurar": False,
@@ -160,7 +160,7 @@ pegar = true           # pegar solo con Ctrl+V (necesita ydotool)
 terminales = []        # apps que usan Ctrl+Shift+V en vez de Ctrl+V
 
 [sistema]
-compositor = "auto"    # auto | niri | ninguno
+compositor = "auto"    # auto | niri | hyprland | sway | x11 | ninguno
 log = null             # null = $XDG_RUNTIME_DIR/dictala.log
 lock = null
 depurar = false

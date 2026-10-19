@@ -22,39 +22,67 @@ ok()    { printf '\033[1;32m ok\033[0m %s\n' "$*"; }
 
 # --- 1. dependencias del sistema -------------------------------------------
 info "Verificando dependencias del sistema"
-FALTAN=()
-declare -A PAQUETES=(
-  [wl-copy]="wl-clipboard   (portapapeles)"
-  [ydotool]="ydotool        (pegado automatico)"
-  [notify-send]="libnotify    (notificaciones)"
-  [systemd-run]="systemd      (limite de memoria, opcional)"
+
+# Cada requisito: "etiqueta|programas que lo satisfacen|pkg arch|pkg debian|pkg fedora"
+# El portapapeles tiene tres: en Wayland va wl-copy, en X11 xclip o xsel.
+REQUISITOS=(
+  "portapapeles|wl-copy,xclip,xsel|wl-clipboard|wl-clipboard|wl-clipboard"
+  "pegado automatico|ydotool|ydotool|ydotool|ydotool"
+  "notificaciones|notify-send|libnotify|libnotify-bin|libnotify"
+  "tope de memoria|systemd-run|systemd|systemd|systemd"
 )
-for prog in "${!PAQUETES[@]}"; do
-  if command -v "$prog" >/dev/null 2>&1; then
-    ok "$prog"
+
+nombre_de_familia() {
+  if command -v pacman >/dev/null 2>&1; then echo arch
+  elif command -v apt-get >/dev/null 2>&1; then echo deb
+  elif command -v dnf >/dev/null 2>&1; then echo fedora
+  else echo ninguno
+  fi
+}
+
+FAMILIA="$(nombre_de_familia)"
+FALTAN_PAQ=()
+for req in "${REQUISITOS[@]}"; do
+  IFS='|' read -r etiqueta progs pa pa_deb pa_fed <<<"$req"
+  case "$FAMILIA" in
+    arch)   PAQ="$pa" ;;
+    deb)    PAQ="$pa_deb" ;;
+    fedora) PAQ="$pa_fed" ;;
+    *)      PAQ="$pa" ;;
+  esac
+  faltan=()
+  IFS=',' read -ra candidatos <<<"$progs"
+  for prog in "${candidatos[@]}"; do
+    command -v "$prog" >/dev/null 2>&1 || faltan+=("$prog")
+  done
+  if [ ${#faltan[@]} -eq 0 ]; then
+    ok "$etiqueta  (${progs})"
   else
-    FALTAN+=("$prog")
+    FALTAN_PAQ+=("$PAQ")
+    aviso "$etiqueta: falta ${faltan[*]} -> paquete $PAQ"
   fi
 done
 
-if [ ${#FALTAN[@]} -gt 0 ]; then
-  aviso "Falta:"
-  for prog in "${FALTAN[@]}"; do
-    echo "     $prog  ->  ${PAQUETES[$prog]}"
-  done
+if [ ${#FALTAN_PAQ[@]} -gt 0 ]; then
   echo
-  echo "  Instalalos con tu gestor de paquetes. En Arch:"
-  echo "      sudo pacman -S wl-clipboard ydotool libnotify"
+  case "$FAMILIA" in
+    arch)   echo "  Para instalarlas a mano:  sudo pacman -S ${FALTAN_PAQ[*]}" ;;
+    deb)    echo "  Para instalarlas a mano:  sudo apt install ${FALTAN_PAQ[*]}" ;;
+    fedora) echo "  Para instalarlas a mano:  sudo dnf install ${FALTAN_PAQ[*]}" ;;
+    *)      echo "  No encontre pacman, apt-get ni dnf. Instalas los paquetes a mano:" ;;
+  esac
+  echo "  dictala arranca igual sin esto, con menos funciones."
   echo
-  read -r -p "  ¿Querés que intente instalarlos con pacman ahora? [s/N] " r || r="n"
-  if [[ "${r,,}" == "s" ]] && command -v pacman >/dev/null 2>&1; then
+  read -r -p "  ¿Querés que intente instalarlas ahora? [s/N] " r || r="n"
+  if [[ "${r,,}" == "s" && "$FAMILIA" != "ninguno" ]]; then
     read -r -p "  Se va a usar sudo. ¿Confirmás? [s/N] " c || c="n"
     if [[ "${c,,}" == "s" ]]; then
-      sudo pacman -S --needed --noconfirm wl-clipboard ydotool libnotify || \
-        aviso "pacman fallo o se cancelo. Segui manualmente."
+      case "$FAMILIA" in
+        arch)   sudo pacman -S --needed --noconfirm "${FALTAN_PAQ[@]}" ;;
+        deb)    sudo apt-get install -y "${FALTAN_PAQ[@]}" ;;
+        fedora) sudo dnf install -y "${FALTAN_PAQ[@]}" ;;
+      esac || aviso "La instalacion fallo o se cancelo. Segui manualmente."
     fi
-  else
-    aviso "Seguis sin ellas. dictala va a funcionar igual, con menos funciones."
   fi
 fi
 
@@ -130,6 +158,131 @@ else
 fi
 
 # --- 6. snippet del compositor --------------------------------------------
+# Que compositor corre, no cual esta instalado: tener hyprctl en el PATH no
+# significa que estes en Hyprland.
+detectar_compositor() {
+  if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    if command -v niri >/dev/null 2>&1 && niri msg -j windows >/dev/null 2>&1; then
+      echo niri; return
+    fi
+    if command -v hyprctl >/dev/null 2>&1 && hyprctl -j activewindow >/dev/null 2>&1; then
+      echo hyprland; return
+    fi
+    if command -v swaymsg >/dev/null 2>&1 && swaymsg -t get_tree >/dev/null 2>&1; then
+      echo sway; return
+    fi
+  fi
+  if [ -n "${DISPLAY:-}" ] && command -v xdotool >/dev/null 2>&1 &&
+     xdotool getactivewindow >/dev/null 2>&1; then
+    echo x11; return
+  fi
+  # Sin sesion grafica (instalacion por SSH, en un contenedor): adivino por la config.
+  # El :- importa: el script corre con set -u y esa variable no siempre existe.
+  case "${XDG_CURRENT_DESKTOP:-}" in
+    *hyprland*) echo hyprland; return ;;
+    *sway*)     echo sway; return ;;
+    *niri*)     echo niri; return ;;
+    *bspwm*)    echo bspwm; return ;;
+    *i3*)       echo i3; return ;;
+    *gnome*)    echo gnome; return ;;
+    *kde*)      echo kde; return ;;
+  esac
+  for c in niri hypr sway bspwm i3; do
+    [ -d "$HOME/.config/$c" ] && { echo "$c"; return; }
+  done
+  echo desconocido
+}
+
+COMP="$(detectar_compositor)"
+COMANDO="systemd-run --user --scope -q -p MemoryMax=$MEMORIA $BIN/dictala"
+
+snippet() {
+  case "$1" in
+    niri)
+      cat <<SNIP
+    // Dictado por voz.
+    // repeat=false: sin esto, mantener la tecla lanza varias transcripciones
+    // a la vez y eso puede matar tu sesion (ver README, seccion Importante).
+    // systemd-run --scope: saca el proceso del cgroup del compositor y le
+    // pone un tope de memoria.
+    XF86Calculator repeat=false {
+        spawn-sh "$COMANDO"
+    }
+SNIP
+      ;;
+    hyprland)
+      cat <<SNIP
+    # Dictado por voz.
+    # El modificador vacio ("," despues de bind) dispara al apretar, no al
+    # soltar: sin eso, mantener la tecla lanza varias transcripciones.
+    bind = ,XF86Calculator,exec,$COMANDO
+SNIP
+      ;;
+    sway | i3)
+      cat <<SNIP
+    # Dictado por voz.
+    # bindsym dispara al apretar. Con --release dispara al soltar, no es eso.
+    bindsym XF86Calculator exec $COMANDO
+SNIP
+      ;;
+    bspwm)
+      cat <<SNIP
+    # Dictado por voz. En sxhkd la tecla y el comando van en dos lineas:
+    # la primera sin sangria, la segunda con cuatro espacios.
+    XF86Calculator
+        $COMANDO
+SNIP
+      ;;
+    gnome)
+      cat <<SNIP
+    # Dictado por voz.
+    # GNOME sobre Wayland no puede binds de tecla arbitraria. Los atajos
+    # globales van por gsettings, en dos pasos:
+    #
+    # 1) declararlo:
+    #    gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/dictala/']"
+    #
+    # 2) darle la orden:
+    #    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:dictala /org/gnome/settings-daemon/plugins/media-keys/dictala/ command "$COMANDO"
+    #
+    # Ojo: GNOME reserva casi todos los atajos con tecla multimedia, y una
+    # combinacion simple suele pisar algo. Si podes, usa una tecla sola.
+SNIP
+      ;;
+    kde)
+      cat <<SNIP
+    # Dictado por voz.
+    # Plasma no tiene una linea de config parecida para atajos globales:
+    # en Configuracion del sistema > Teclado > Atajos > Global, anadir un
+    # atajo con esta orden:
+    $COMANDO
+    # En Wayland asignalo a un atajo que no este en uso.
+SNIP
+      ;;
+    *)
+      cat <<SNIP
+    # Dictado por voz.
+    # No pude detectar tu compositor. El comando es el mismo para todos:
+    $COMANDO
+    # El README tiene el snippet de Hyprland, Sway, i3, bspwm, GNOME, KDE y niri.
+SNIP
+      ;;
+  esac
+}
+
+# Tilde a proposito: se imprime para que la copie el usuario, no se expande.
+# shellcheck disable=SC2088
+case "$COMP" in
+  niri)      DESTINO="~/.config/niri/config.kdl, dentro del bloque binds { }" ;;
+  hyprland)  DESTINO="~/.config/hypr/hyprland.conf" ;;
+  sway)      DESTINO="~/.config/sway/config" ;;
+  i3)        DESTINO="~/.config/i3/config" ;;
+  bspwm)     DESTINO="~/.config/bspwm/sxhkdrc" ;;
+  gnome)     DESTINO="un atajo global de GNOME (ver abajo)" ;;
+  kde)       DESTINO="Configuracion del sistema > Teclado > Atajos > Global" ;;
+  *)         DESTINO="tu config de compositor (ver README)" ;;
+esac
+
 cat <<EOF
 
 $(printf '\033[1;32m')Listo.$(printf '\033[0m')
@@ -140,33 +293,22 @@ Para dictalar a mano:
 Diagnostico y calibracion del microfono:
     $BIN/dictala doctor
 
-Pegá esto en tu config de niri, dentro del bloque 'binds { }':
+Pegá esto en $DESTINO:
 
-    // Dictado por voz.
-    // repeat=false: sin esto, mantener la tecla lanza varias transcripciones
-    // a la vez y eso puede matar tu sesion (ver README, seccion Importante).
-    // spawn-sh: 'spawn' no pasa por shell, asi que con spawn el >> al log
-    // no funciona y el script falla en silencio.
-    // systemd-run --scope: saca el script del cgroup de niri.service y le
-    // pone un tope de memoria.
-    XF86Calculator repeat=false {
-        spawn-sh "systemd-run --user --scope -q -p MemoryMax=$MEMORIA $BIN/dictala"
-    }
+$(snippet "$COMP")
 
 QUE TECLA ES
     XF86Calculator es la tecla Calculadora, la que dice CALC en muchos
     teclados. Apretala, habla, y el texto aparece donde tengas el cursor.
 
     Si tu teclado no la tiene, cambiala por la que quieras. Para descubrir
-    el nombre de una tecla en niri, corré esto y apretala:
+    el nombre de una tecla, corré esto y apretala:
 
-        wev
+        wev      (niri, Sway, Hyprland -- lo que este en wlroots)
+        xev      (X11: bspwm, i3, GNOME, KDE)
 
     Te imprime el nombre XKB (por ejemplo 'XF86AudioMicMute') y eso es lo
     que va en lugar de XF86Calculator.
-
-Despues: niri msg action load-config-file
-        (o reinicia la sesion)
 
 El log queda en: \${XDG_RUNTIME_DIR:-/tmp}/dictala.log
 EOF
