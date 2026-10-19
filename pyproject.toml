@@ -5,12 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dictala"
 version = "0.1.0"
-description = "Dictado por voz global en Wayland: tecla -> microfono -> transcripcion -> portapapeles"
+description = "Dictado por voz global en Linux: tecla -> microfono -> transcripcion -> portapapeles"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["wayland", "speech-recognition", "whisper", "dictation", "niri", "linux"]
+keywords = [
+    "wayland",
+    "x11",
+    "speech-recognition",
+    "whisper",
+    "dictation",
+    "linux",
+    "hyprland",
+    "sway",
+    "bspwm",
+    "i3",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",

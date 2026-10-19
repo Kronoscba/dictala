@@ -6,9 +6,9 @@
 [![Licencia: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue?logo=python&logoColor=white)](pyproject.toml)
 [![Plataforma](https://img.shields.io/badge/platform-Linux-lightgrey?logo=linux&logoColor=white)](#requisitos)
-[![Compositor](https://img.shields.io/badge/compositor-niri-blueviolet?logo=niri&logoColor=white)](#español)
+[![Compositor](https://img.shields.io/badge/compositor-cualquiera-blueviolet?logo=linux&logoColor=white)](#español)
 
-**Dictado por voz global para Wayland.**
+**Dictado por voz global para Linux.**
 
 [Español](#español) · [English](#english)
 
@@ -21,7 +21,8 @@
 ## Español
 
 Pulsá una tecla, hablá, y el texto transcrito aparece donde tengas el cursor.
-Funciona sobre Wayland con niri, usando Whisper (faster-whisper) en CPU.
+Funciona en Linux con cualquier compositor, usando Whisper (faster-whisper) en
+CPU. Wayland y X11.
 
 ```
 Tecla  ->  micrófono  ->  faster-whisper  ->  portapapeles + Ctrl+V
@@ -33,13 +34,130 @@ Tecla  ->  micrófono  ->  faster-whisper  ->  portapapeles + Ctrl+V
 |---|---|---|
 | Python 3.11+ | `python` | el intérprete |
 | `portaudio` | `portaudio` | audio; lo requiere `sounddevice` |
-| `wl-clipboard` | `wl-clipboard` | poner el texto en el portapapeles |
+| `wl-clipboard` | `wl-clipboard` | portapapeles en **Wayland** |
+| `xclip` | `xclip` | portapapeles en **X11** (bspwm, i3, X11 puro) |
 | `libnotify` | `libnotify` | notificación (opcional) |
 | `ydotool` | `ydotool` | pegado automático (opcional) |
 | `systemd` | `systemd` | tope de memoria (opcional) |
 
+Bastan **uno** de `wl-clipboard` o `xclip`, según tu sesión. `dictala doctor`
+te dice cuál encontró.
+
 `sounddevice`, `numpy` y `faster-whisper` **no están en los repos de Arch**:
 los instala el script dentro de su propio virtualenv.
+
+<a name="compositores"></a>
+
+### Qué funciona en qué
+
+El fondo no depende del compositor:
+
+- **`ydotool` inyecta por `uinput`**, o sea a nivel del kernel. No ve el
+  compositor. Por eso el pegado automático funciona en todos.
+- **Whisper** habla con el micrófono, no con la ventana.
+- **El portapapeles** usa `wl-copy` en Wayland y cae a `xclip` o `xsel` en X11.
+
+Lo único que cambia por compositor es **dos cosas**: el snippet para
+agregar el atajo, y un detalle cosmético.
+
+| | Atajo | Detecta la app enfocada |
+|---|---|---|
+| **niri** | `config.kdl` | `niri msg` |
+| **Hyprland** | `hyprland.conf` | `hyprctl` |
+| **Sway** | `~/.config/sway/config` | `swaymsg` |
+| **i3** | `~/.config/i3/config` | `xdotool` |
+| **bspwm** | `~/.config/bspwm/sxhkdrc` | `xdotool` |
+| **GNOME** | `gsettings`, sin tecla libre | `xdotool` |
+| **KDE** | atajo global, por GUI | `xdotool` |
+
+Si tu compositor no está en la lista: `dictala` funciona igual. Lo único que
+pierdes es el atajo (lo tenés que agregar a mano) y el pegado en terminales,
+porque cae a `Ctrl+V` en vez de `Ctrl+Shift+V`. Lo único que **necesitás** es
+poder lanzar el comando con una tecla, y eso lo hace cualquiera.
+
+`install.sh` detecta el compositor y te imprime el snippet correcto. Los
+snippets están todos más abajo por si los querés copiar a mano.
+
+<a name="snippet-niri"></a>
+
+#### niri
+
+`~/.config/niri/config.kdl`, dentro del bloque `binds { }`:
+
+```kdl
+XF86Calculator repeat=false {
+    spawn-sh "systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala"
+}
+```
+
+`repeat=false` es **imprescindible**: sin eso, mantener la tecla lanza varias
+transcripciones a la vez y eso puede matarte la sesión. Ver
+[Importante](#importante).
+
+#### Hyprland
+
+`~/.config/hypr/hyprland.conf`:
+
+```ini
+bind = ,XF86Calculator,exec,systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala
+```
+
+El modificador vacío (la `,` después de `bind`) es lo que dispara al apretar
+en vez de al soltar. Es el equivalente de `repeat=false` en niri.
+
+#### Sway
+
+`~/.config/sway/config`:
+
+```
+bindsym XF86Calculator exec systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala
+```
+
+#### i3
+
+`~/.config/i3/config`. Mismo formato que Sway:
+
+```
+bindsym XF86Calculator exec systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala
+```
+
+En i3 se relee con `i3-msg reload`, o `Mod+Shift+c` / `Mod+c` si no lo cambiaste.
+
+#### bspwm
+
+`~/.config/bspwm/sxhkdrc`. En sxhkd la tecla y el comando van en **dos
+líneas**: la primera sin sangría, la segunda con cuatro espacios.
+
+```
+XF86Calculator
+    systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala
+```
+
+bspwm es X11, así que necesitás `xclip` en vez de `wl-clipboard`.
+
+#### GNOME
+
+GNOME sobre Wayland no permite atajos de tecla arbitraria. Los atajos globales
+van por `gsettings`, en dos pasos:
+
+```bash
+gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/dictala/']"
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:dictala /org/gnome/settings-daemon/plugins/media-keys/dictala/ command 'systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala'
+```
+
+Ojo: GNOME se reserva casi todos los atajos con tecla multimedia, y una
+combinación simple tipo `Ctrl+Espacio` casi seguro pisa algo. Si podés, usá
+una tecla sola.
+
+#### KDE
+
+Plasma no tiene una línea de config para atajos globales. Va por la GUI:
+**Configuración del sistema → Teclado → Atajos → Global**, sumás un atajo y
+en el comando ponés:
+
+```
+systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala
+```
 
 ### Instalación
 
@@ -53,18 +171,10 @@ El instalador verifica las dependencias, dice cuáles faltan y **no instala
 nada sin que confirmes**. Después crea el virtualenv, instala el paquete y
 habilita el servicio de usuario de `ydotool` si puede.
 
-Al final imprime el snippet para tu `config.kdl`. Pegalo dentro del bloque
-`binds { }`:
+Al final imprime el snippet para tu compositor y te dice en qué archivo va. Los
+snippets de cada uno están arriba, en [Qué funciona en qué](#compositores).
 
-```kdl
-XF86Calculator repeat=false {
-    spawn-sh "systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala"
-}
-```
-
-Después: `niri msg action load-config-file`.
-
-`install.sh` **no toca tu config de niri**. Ese snippet lo pegás vos.
+`install.sh` **no toca la config de tu compositor**. Ese snippet lo pegás vos.
 
 <a name="que-tecla"></a>
 
@@ -74,10 +184,11 @@ Después: `niri msg action load-config-file`.
 teclados. Apretala, hablá, y el texto aparece donde tengas el cursor.
 
 Si tu teclado no la tiene, usá la que quieras. Para descubrir el nombre de una
-tecla en niri:
+tecla:
 
 ```bash
-wev
+wev    # niri, Sway, Hyprland (lo que esté en wlroots)
+xev    # X11: bspwm, i3, GNOME, KDE
 ```
 
 Apretá la tecla y mirá el nombre XKB que imprime (por ejemplo
@@ -122,7 +233,7 @@ pegar = true
 terminales = ["foot"]  # apps que usan Ctrl+Shift+V
 
 [sistema]
-compositor = "auto"    # auto | niri | ninguno
+compositor = "auto"    # auto | niri | hyprland | sway | x11 | ninguno
 ```
 
 ### Qué modelos usar
@@ -149,10 +260,14 @@ costo casi no depende de cuánto hablaste.
 No es decorativo. Sacale cualquiera de estas tres cosas y puede **matarte la
 sesión**:
 
-**`repeat=false`**. Los binds en niri se repiten por defecto mientras los
+**`repeat=false`**. En niri los binds se repiten por defecto mientras los
 mantengas apretados (con `repeat-rate 35/s`, ~35 veces por segundo). Cada
 repetición lanza una transcripción completa. Varias en paralelo multiplican la
 memoria y el OOM killer interviene.
+
+En otros compositores el equivalente es disparar **al apretar y no al soltar**.
+Hyprland: el modificador vacío (`bind = ,XF86Calculator,exec,...`). Sway e i3:
+`bindsym` ya dispara al apretar, no hay que hacer nada.
 
 **`systemd-run --user --scope`**. Tu compositor suele ser un servicio systemd
 de usuario. Un proceso lanzado desde un bind vive dentro de su cgroup. Cuando
@@ -223,19 +338,37 @@ independiente del layout: `KEY_LEFTCTRL 29`, `KEY_LEFTSHIFT 42`, `KEY_V 47`.
 | Cómputo | CPU de 4 cores, 8 GB de RAM, sin GPU |
 | Distribución de teclado | anybody: se usan keycodes, no teclas |
 
+**Probado además en contenedores, sin GPU ni micrófono:**
+
+| Qué | Cómo | Qué se comprobó |
+|---|---|---|
+| `install.sh` en Debian 13 | contenedor limpio | instala las dependencias de punta a punta e imprime el snippet |
+| X11 (bspwm) | Xvfb + bspwm real | detecta `x11`, saca la clase de `xprop`, `xclip` deja el texto en CLIPBOARD, `sxhkd` acepta el snippet y la tecla lo dispara |
+| Wayland (sway) | sway headless | detecta `sway`, lee el `app_id` del árbol real de `swaymsg`, `wl-copy` deja el texto |
+| `doctor` | en las dos sesiones | reporta el compositor correcto y el portapapeles que hay |
+
+En esas pruebas no hay micrófono ni `ydotool`, así que el audio y el pegado
+automático se ven solo como degradación: `Ctrl+V` y el texto en el
+portapapeles.
+
 **NO probado. No lo asumas:**
 
-- Otras distribuciones (Fedora, Debian, Ubuntu, NixOS)
-- Otros compositores: sway, Hyprland, GNOME, KDE, River
-- Micrófonos analógicos, Bluetooth, o que no abran a 48000 Hz
+- **Hyprland de punta a punta.** No se pudo levantar en un contenedor: pide
+  una GPU con KMS y un seat, y anidado tampoco arranca (weston 16 anuncia
+  `wl_compositor` v5 y Hyprland pide v6). Su detector está cubierto por tests
+  unitarios y por el contrato documentado de `hyprctl -j activewindow`
+  (`{"class": ...}`), pero no por una sesión real.
+- Otras distribuciones (Fedora, Ubuntu, NixOS). De Debian solo está probado
+  `install.sh`.
 - GPU (CUDA, ROCm)
 - Modelos `medium` en adelante
 - Más de un micrófono a la vez, o hotplug durante la grabación
 - Idiomas distintos del español
+- Micrófonos analógicos, Bluetooth, o que no abran a 48000 Hz
 
-Con `compositor = "ninguno"` o fuera de niri, `dictala` **cae a `Ctrl+V` sin
-preguntar**. Ese camino **no está probado** en otros compositores: es un
-fallback seguro, no una integración.
+Con `compositor = "ninguno"` o en un compositor sin detector, `dictala` **cae a
+`Ctrl+V` sin preguntar**. Ese camino es un fallback seguro, no una integración:
+si tu terminal necesita `Ctrl+Shift+V`, ponela en `terminales` a mano.
 
 ### Desinstalar
 
@@ -244,7 +377,7 @@ fallback seguro, no una integración.
 ```
 
 Borra el virtualenv, la configuración y deshabilita `ydotool.service`.
-**No toca tu config de niri**: si agregaste el bind, quitalo vos.
+**No toca la config de tu compositor**: si agregaste el atajo, quitalo vos.
 
 ### Desarrollo
 
@@ -267,7 +400,8 @@ MIT. Las dependencias lo son también: `faster-whisper` MIT, `ctranslate2` MIT,
 ## English
 
 Press a key, speak, and the transcribed text appears wherever your cursor is.
-Works on Wayland with niri, using Whisper (faster-whisper) on CPU.
+Works on Linux with any compositor, using Whisper (faster-whisper) on CPU.
+Wayland and X11.
 
 ### Requirements
 
@@ -275,13 +409,129 @@ Works on Wayland with niri, using Whisper (faster-whisper) on CPU.
 |---|---|---|
 | Python 3.11+ | `python` | interpreter |
 | `portaudio` | `portaudio` | audio; required by `sounddevice` |
-| `wl-clipboard` | `wl-clipboard` | put text on the clipboard |
+| `wl-clipboard` | `wl-clipboard` | clipboard on **Wayland** |
+| `xclip` | `xclip` | clipboard on **X11** (bspwm, i3, plain X11) |
 | `libnotify` | `libnotify` | notification (optional) |
 | `ydotool` | `ydotool` | automatic paste (optional) |
 | `systemd` | `systemd` | memory cap (optional) |
 
+You need **one** of `wl-clipboard` or `xclip`, depending on your session.
+`dictala doctor` tells you which one it found.
+
 `sounddevice`, `numpy` and `faster-whisper` are **not in the Arch repos**: the
 installer puts them in its own virtualenv.
+
+<a name="compositors"></a>
+
+### What works where
+
+The core does not depend on the compositor:
+
+- **`ydotool` injects through `uinput`**, that is, at the kernel level. It never
+  talks to the compositor. That is why automatic paste works everywhere.
+- **Whisper** talks to the microphone, not to the window.
+- **The clipboard** uses `wl-copy` on Wayland and falls back to `xclip` or
+  `xsel` on X11.
+
+Only two things change per compositor: **the snippet** to bind the key, and one
+cosmetic detail.
+
+| | Bind snippet | Focused-app detection |
+|---|---|---|
+| **niri** | `config.kdl` | `niri msg` |
+| **Hyprland** | `hyprland.conf` | `hyprctl` |
+| **Sway** | `~/.config/sway/config` | `swaymsg` |
+| **i3** | `~/.config/i3/config` | `xdotool` |
+| **bspwm** | `~/.config/bspwm/sxhkdrc` | `xdotool` |
+| **GNOME** | `gsettings`, no free keys | `xdotool` |
+| **KDE** | global shortcut, via GUI | `xdotool` |
+
+If your compositor isn't in that list, `dictala` still works. All you lose is
+the snippet (add the key yourself) and pasting into terminals, because it
+falls back to `Ctrl+V` instead of `Ctrl+Shift+V`. The only thing you **need** is
+the ability to launch a command with a key, and every compositor can do that.
+
+`install.sh` detects your compositor and prints the right snippet. All the
+snippets are below if you want to copy one by hand.
+
+#### niri
+
+`~/.config/niri/config.kdl`, inside `binds { }`:
+
+```kdl
+XF86Calculator repeat=false {
+    spawn-sh "systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala"
+}
+```
+
+`repeat=false` is **not optional**: without it, holding the key starts several
+transcriptions at once and that can take your session down. See
+[Important](#important).
+
+#### Hyprland
+
+`~/.config/hypr/hyprland.conf`:
+
+```ini
+bind = ,XF86Calculator,exec,systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala
+```
+
+The empty modifier (the `,` after `bind`) is what fires on press instead of on
+release. It's the equivalent of niri's `repeat=false`.
+
+#### Sway
+
+`~/.config/sway/config`:
+
+```
+bindsym XF86Calculator exec systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala
+```
+
+#### i3
+
+`~/.config/i3/config`. Same format as Sway:
+
+```
+bindsym XF86Calculator exec systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala
+```
+
+Reload with `i3-msg reload`, or `Mod+Shift+c` / `Mod+c` if you never changed it.
+
+#### bspwm
+
+`~/.config/bspwm/sxhkdrc`. In sxhkd the key and the command go on **two lines**:
+the first with no indentation, the second indented by four spaces.
+
+```
+XF86Calculator
+    systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala
+```
+
+bspwm is X11, so you need `xclip` instead of `wl-clipboard`.
+
+#### GNOME
+
+GNOME on Wayland doesn't allow arbitrary keybinds. Global shortcuts go through
+`gsettings`, in two steps:
+
+```bash
+gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/dictala/']"
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:dictala /org/gnome/settings-daemon/plugins/media-keys/dictala/ command 'systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala'
+```
+
+Watch out: GNOME reserves most multimedia-key shortcuts, and a simple
+combination like `Ctrl+Space` will clash with something. If you can, use a
+single key.
+
+#### KDE
+
+Plasma has no config line for global shortcuts. It's a GUI task: **System
+Settings → Keyboard → Shortcuts → Global**, add a shortcut and put this in the
+command field:
+
+```
+systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala
+```
 
 ### Install
 
@@ -295,17 +545,10 @@ The installer checks dependencies, reports what is missing and **installs
 nothing without your confirmation**. It then creates the virtualenv, installs
 the package and enables the `ydotool` user service if it can.
 
-It prints the snippet for your `config.kdl`. Paste it inside `binds { }`:
+It prints the snippet for your compositor and tells you which file it goes in.
+Every snippet is above, under [What works where](#compositors).
 
-```kdl
-XF86Calculator repeat=false {
-    spawn-sh "systemd-run --user --scope -q -p MemoryMax=2G ~/.local/share/dictala/venv/bin/dictala"
-}
-```
-
-Then: `niri msg action load-config-file`.
-
-`install.sh` **does not touch your niri config**. You paste that snippet.
+`install.sh` **does not touch your compositor config**. You paste that snippet.
 
 ### Which key to use
 
@@ -313,10 +556,11 @@ Then: `niri msg action load-config-file`.
 keyboards. Press it, speak, and the text lands wherever your cursor is.
 
 If your keyboard doesn't have it, use whatever key you like. To find the name
-of a key in niri:
+of a key:
 
 ```bash
-wev
+wev    # niri, Sway, Hyprland (anything on wlroots)
+xev    # X11: bspwm, i3, GNOME, KDE
 ```
 
 Press the key and read the XKB name it prints (for example
@@ -366,6 +610,10 @@ Remove any of the three and it can **kill your session**:
 **`repeat=false`**. niri binds repeat by default while held. Each repeat starts
 a full transcription; several in parallel multiply memory usage until the OOM
 killer steps in.
+
+Elsewhere the equivalent is firing **on press, not on release**. Hyprland: the
+empty modifier (`bind = ,XF86Calculator,exec,...`). Sway and i3: `bindsym`
+already fires on press, nothing to do.
 
 **`systemd-run --user --scope`**. Your compositor is usually a systemd user
 service, and a process spawned from a bind lives inside its cgroup. When the OOM
@@ -418,13 +666,38 @@ keycodes (`/usr/include/linux/input-event-codes.h`) and is layout-independent.
 **Tested on the development machine:** Arch Linux, niri 26.04 on Wayland, Jabra
 BIZ 1100 USB microphone, 4-core CPU with 8 GB RAM and no GPU.
 
-**NOT tested — do not assume:** other distributions; other compositors (sway,
-Hyprland, GNOME, KDE, River); analog or Bluetooth microphones; GPUs; models
-`medium` and up; more than one microphone at a time; hotplug during recording;
-languages other than Spanish.
+**Also tested in containers, with no GPU and no microphone:**
 
-Outside niri, `dictala` **falls back to `Ctrl+V` without asking**. That path is
-a safe fallback, not a tested integration.
+| What | How | What was checked |
+|---|---|---|
+| `install.sh` on Debian 13 | clean container | installs dependencies end to end and prints the snippet |
+| X11 (bspwm) | Xvfb + real bspwm | detects `x11`, reads the class via `xprop`, `xclip` puts the text in CLIPBOARD, `sxhkd` accepts the snippet and the key fires it |
+| Wayland (sway) | headless sway | detects `sway`, reads `app_id` from the real `swaymsg` tree, `wl-copy` puts the text |
+| `doctor` | in both sessions | reports the right compositor and the clipboard that exists |
+
+Those containers have no microphone and no `ydotool`, so audio and automatic
+pasting only show up as graceful degradation: `Ctrl+V` and the text sitting in
+the clipboard.
+
+**NOT tested — do not assume:**
+
+- **Hyprland end to end.** It could not be brought up in a container: it wants
+  a KMS-capable GPU plus a seat, and nesting it does not work either (weston 16
+  advertises `wl_compositor` v5 and Hyprland asks for v6). Its detector is
+  covered by unit tests and by the documented `hyprctl -j activewindow`
+  contract (`{"class": ...}`), but not by a live session.
+- Other distributions (Fedora, Ubuntu, NixOS). On Debian only `install.sh` was
+  tested.
+- GPUs (CUDA, ROCm)
+- `medium` and up models
+- More than one microphone at a time, or hotplug during recording
+- Languages other than Spanish
+- Analog or Bluetooth microphones
+
+With `compositor = "ninguno"` or on a compositor with no detector, `dictala`
+**falls back to `Ctrl+V` without asking**. That path is a safe fallback, not an
+integration: if your terminal needs `Ctrl+Shift+V`, put it in `terminales`
+yourself.
 
 ### Uninstall
 
@@ -433,7 +706,7 @@ a safe fallback, not a tested integration.
 ```
 
 Removes the virtualenv and config, disables `ydotool.service`. **It does not
-touch your niri config**: if you added the bind, remove it yourself.
+touch your compositor config**: if you added the keybind, remove it yourself.
 
 ### License
 
